@@ -11,6 +11,7 @@ using UnityEngine.UI;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using System;
+using UnityEngine.SceneManagement;
 
 public enum SBS { START, STOP }
 
@@ -18,13 +19,25 @@ public class UI : MonoBehaviour
 {
     static public Vector3 ContinuousForce;
     static public SBS sb_status = SBS.START; //Done
-    static float MAX_FORCE = 10;
+    static public float MAX_FORCE = 10;
     static public float delta = 0; // in Radius
+    static public float MAX_WORK = 225;
+    static private bool showHint = true;
 
     public Button StartButton;
-    public Image tick;
     public Scrollbar ContinuousForceScrollbar;
     public InputField CFAngle;
+    public Scrollbar WorkScrollbar;
+
+    public Button HintNext;
+    public Button HintOK;
+    public Image Hint;
+    public Image Hint2;
+
+    public Button PlayAgian;
+    public Button NextLevel;
+    public Image Scoring;
+    public Text Rank;
 
     // debug
     public int angle;
@@ -35,14 +48,53 @@ public class UI : MonoBehaviour
         EventSystem.current.SetSelectedGameObject(null);
 
         StartButton.onClick.AddListener(StartButtonClick);
-        Time.timeScale = 1; // freeze the game
-        // tick start at cforce
-        tick.GetComponent<RectTransform>().localPosition = new Vector3(375f, 158f, 0f);
+        Time.timeScale = 0; // freeze the game
+        sb_status = SBS.START;
+
+        HintNext.onClick.AddListener(HintNextClick);
+        HintOK.onClick.AddListener(HintOKClick);
+        Hint.transform.localPosition = new Vector3(0, 0, 0);
+        Hint2.transform.localPosition = new Vector3(9999, 9999, 0);
+
+        PlayAgian.onClick.AddListener(PlayAgianClick);
+        NextLevel.onClick.AddListener(NextLevelClick);
+        Scoring.transform.localPosition = new Vector3(9999, 9999, 0);
 
         ContinuousForceScrollbar.onValueChanged.AddListener(delegate { TaskOnValueChanged(); });
+        WorkScrollbar.onValueChanged.AddListener(delegate { TaskOnWorkChanged(); });
         CFAngle.onValueChanged.AddListener(delegate { TaskAngleChanged(); });
 
         CFAngle.text = "0";
+
+        if (!showHint)
+        {
+            Hint.transform.localPosition = new Vector3(9999, 9999, 0);
+            Hint2.transform.localPosition = new Vector3(9999, 9999, 0);
+            StartButtonClick();
+        }
+        showHint = false;
+    }
+
+    void PlayAgianClick()
+    {
+        SceneManager.LoadScene(0);
+    }
+
+    void NextLevelClick()
+    {
+        SceneManager.LoadScene(1);
+    }
+
+    void HintNextClick()
+    {
+        Hint.transform.localPosition = new Vector3(9999, 9999, 0);
+        Hint2.transform.localPosition = new Vector3(0, 0, 0);
+    }
+
+    void HintOKClick()
+    {
+        Hint2.transform.localPosition = new Vector3(9999, 9999, 0);
+        StartButtonClick();
     }
 
     private void TaskAngleChanged()
@@ -53,41 +105,74 @@ public class UI : MonoBehaviour
         ContinuousForce = new Vector3(size * Mathf.Cos(delta), size * Mathf.Sin(delta), 0);
     }
 
+    void TaskOnValueChanged()
+    {
+        float angleInDegree = float.Parse(CFAngle.text);
+        delta = angleInDegree / 360f * 2 * Mathf.PI;
+        var size = ContinuousForceScrollbar.value * MAX_FORCE;
+        ContinuousForce = new Vector3(size * Mathf.Cos(delta), size * Mathf.Sin(delta), 0);
+    }
+
+    void TaskOnWorkChanged()
+    {
+        WorkScrollbar.value = Cube.workDone / MAX_WORK;
+    }
+
     void Update()
     {
+        if (Cube.clear)
+        {
+            if (Cube.workDone <= 75f)
+            {
+                Rank.text = "SS";
+                Rank.color = new Color(243f / 255f, 240f / 255f, 10f / 255f);
+            }
+            else if (Cube.workDone <= 105)
+            {
+                Rank.text = "S";
+                Rank.color = new Color(243f / 255f, 240f / 255f, 10f / 255f);
+            }
+            else if (Cube.workDone <= 135)
+            {
+                Rank.text = "A";
+                Rank.color = new Color(243f / 255f, 161f / 255f, 255f / 255f);
+            }
+            else if (Cube.workDone <= 165)
+            {
+                Rank.text = "B";
+                Rank.color = new Color(105f / 255f, 215f / 255f, 255f / 255f);
+            }
+            else
+            {
+                Rank.text = "C";
+                Rank.color = new Color(158f / 255f, 235f / 255f, 93f / 255f);
+            }
+            Scoring.transform.localPosition = new Vector3(0, 0, 0);
+            return;
+        }
+
         // pause & resume
         if (Input.GetKeyDown(KeyCode.Space)) StartButtonClick();
 
-        // use Q & E to switch forces
-        if (Input.GetKeyDown(KeyCode.Q))
+        // update angle input field
+        if (ContinuousForce.magnitude != 0)
         {
-            tick.GetComponent<RectTransform>().localPosition = new Vector3(375f, 158f, 0f);
-            Cube.forceType = ForceType.Continuous;
-        }
-        if (Input.GetKeyDown(KeyCode.W))
-        {
-            tick.GetComponent<RectTransform>().localPosition = new Vector3(375f, 72.2f, 0f);
-            Cube.forceType = ForceType.Impulse;
-        }
-
-        // mouse change force direction
-        if (Input.GetKeyDown(KeyCode.Mouse0) && !Panel.isMouseOver())
-        {
-            // change the force's direction
-            var size = ContinuousForceScrollbar.value * MAX_FORCE;
-            ContinuousForce = Cube.mouseDelta.normalized * size;
-            // update the input field
-            delta = Mathf.Acos(ContinuousForce.x/Mathf.Sqrt(ContinuousForce.sqrMagnitude));
+            delta = Mathf.Acos(ContinuousForce.x / ContinuousForce.magnitude);
             if (ContinuousForce.y > 0) angle = Mathf.FloorToInt(delta * Mathf.Rad2Deg);
             else if (ContinuousForce.y < 0) angle = 360 - Mathf.FloorToInt(delta * Mathf.Rad2Deg);
             CFAngle.text = angle.ToString();
         }
-
+        // update force scrollbar
+        ContinuousForceScrollbar.value = ContinuousForce.magnitude > MAX_FORCE ? 1f : ContinuousForce.magnitude / MAX_FORCE;
+        
         // right click 0 out con force
         if (Input.GetKeyDown(KeyCode.Mouse1)) ContinuousForceScrollbar.value = 0;
         // scroll can change the size of the force too
         if (Input.mouseScrollDelta.y < 0) ContinuousForceScrollbar.value += 1f / ContinuousForceScrollbar.numberOfSteps;
         else if (Input.mouseScrollDelta.y > 0) ContinuousForceScrollbar.value -= 1f / ContinuousForceScrollbar.numberOfSteps;
+
+        // Work Scrollbar
+        WorkScrollbar.value = Cube.workDone / MAX_WORK;
     }
 
     void StartButtonClick()
@@ -106,14 +191,5 @@ public class UI : MonoBehaviour
                 break;
         }
         EventSystem.current.SetSelectedGameObject(null);
-    }
-
-
-    void TaskOnValueChanged()
-    {
-        float angleInDegree = float.Parse(CFAngle.text);
-        delta = angleInDegree / 360f * 2 * Mathf.PI;
-        var size = ContinuousForceScrollbar.value * MAX_FORCE;
-        ContinuousForce = new Vector3(size * Mathf.Cos(delta), size * Mathf.Sin(delta), 0);
     }
 }

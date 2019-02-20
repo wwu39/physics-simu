@@ -16,9 +16,10 @@ public class Cube : MonoBehaviour {
     public Vector3 centerPos;
 
     // UI stuff
-    static public ForceType forceType = ForceType.Continuous;
     static public Vector3 mouseDelta;
     public Vector3 m_pos;
+    private bool applyForce = false;
+    static public bool clear;
 
     // 0 = player_force
     // 1 = gravity
@@ -26,13 +27,15 @@ public class Cube : MonoBehaviour {
     // 3 = friction
     // 4 = ???
     public List<GameObject> arrows;
-    public bool drawForce = false;
+    static public bool drawForce = false;
     public bool hasSupport;
     public Vector3 player_force, G, N, f; // forces
     public bool drawOtherForces = false;
     // work related
-    public float workDone;
+    static public float workDone;
     private Vector3 lastPos;
+
+    // debug
 
     private void Awake()
     {
@@ -49,7 +52,7 @@ public class Cube : MonoBehaviour {
 
         if (col.gameObject.name == "Star") // level clear
         {
-            SceneManager.LoadScene(0);
+            clear = true;
         }
     }
 
@@ -70,24 +73,24 @@ public class Cube : MonoBehaviour {
 
     private void OnMouseDown()
     {
-        if (forceType == ForceType.Impulse)
-        {
-            drawForce = true;
-            arrows[0] = Instantiate(arrowPrefab) as GameObject;
-            arrows[0].transform.position = centerPos;
-            arrows[0].transform.GetChild(0).GetComponent<Renderer>().material.color = Color.red;
-            arrows[0].transform.GetChild(1).GetComponent<Renderer>().material.color = Color.red;
-        }
+        drawForce = true;
+        applyForce = false;
     }
 
     // Use this for initialization
     void Start () {
         for (int i = 0; i < 4; ++i) arrows.Add(Instantiate(arrowPrefab) as GameObject);
         lastPos = transform.position;
+        applyForce = false;
+        drawForce = false;
+        arrows[0].transform.position = new Vector3(9999, 9999, 9999);
+        workDone = 0;
+        clear = false;
     }
-	
-	// Update is called once per frame
-	void Update () {
+
+    // Update is called once per frame
+    void Update()
+    {
         m_pos = Input.mousePosition;
         centerPos = centerPoint.transform.position;
 
@@ -95,38 +98,20 @@ public class Cube : MonoBehaviour {
         mousePos2D.z = -Camera.main.transform.position.z;
         Vector3 mousePos3D = Camera.main.ScreenToWorldPoint(mousePos2D);
         mouseDelta = mousePos3D - centerPos;
-        // draw impluse force
-        if (forceType == ForceType.Impulse)
+        if (!applyForce)
         {
-            player_force = drawForce ? 10 * mouseDelta : new Vector3(0f, 0f, 0f);
-            if (drawForce)
-            {
-                Utils.DrawForce(centerPos, arrows[0], player_force, Color.red);
-            }
-            if (Input.GetMouseButtonUp(0))
-            {
-                // when player releases mouse, add the force
-                drawForce = false;
-                GetComponent<Rigidbody>().AddForce(player_force);
-                Destroy(arrows[0]);
-                arrows[0] = null;
-            }
+            player_force = drawForce ? 2 * mouseDelta : new Vector3(0f, 0f, 0f);
+            if (player_force.magnitude > UI.MAX_FORCE) player_force = player_force.normalized * UI.MAX_FORCE;
+            if (drawForce) Utils.DrawForce(centerPos, arrows[0], player_force, Color.red); // drag out a force
+            UI.ContinuousForce = player_force; // release mouse to apply the force
+            if (Input.GetMouseButtonUp(0)) applyForce = true;
         }
-        // draw con force
-        if (forceType == ForceType.Continuous)
+        if (UI.ContinuousForce.magnitude != 0 && applyForce) // apply force to object
         {
-            if (UI.ContinuousForce.sqrMagnitude != 0)
-            {
-                if (arrows[0] == null) arrows[0] = Instantiate(arrowPrefab) as GameObject;
-                Utils.DrawForce(centerPos, arrows[0], UI.ContinuousForce, Color.red);
-                if (Time.timeScale != 0) GetComponent<Rigidbody>().AddForce(UI.ContinuousForce, ForceMode.Force);
-            }
-            else
-            {
-                Destroy(arrows[0]);
-                arrows[0] = null;
-            }
+            Utils.DrawForce(centerPos, arrows[0], UI.ContinuousForce, Color.red);
+            if (Time.timeScale != 0) GetComponent<Rigidbody>().AddForce(UI.ContinuousForce, ForceMode.Force);
         }
+        if (UI.ContinuousForce.magnitude == 0) arrows[0].transform.position = new Vector3(9999, 9999, 9999); // hide the arrow if no force
         if (drawOtherForces)
         {
             // drawing gravity
@@ -174,5 +159,11 @@ public class Cube : MonoBehaviour {
                 arrows[3] = null;
             }
         }
+
+        // calcalate work done for con force
+        Vector3 ds = transform.position - lastPos;
+        if (UI.ContinuousForce.magnitude != 0 && ds.magnitude != 0)
+            workDone += UI.ContinuousForce.magnitude * ds.magnitude * Utils.includedAngle2DCos(UI.ContinuousForce, ds);
+        lastPos = transform.position;
     }
 }
