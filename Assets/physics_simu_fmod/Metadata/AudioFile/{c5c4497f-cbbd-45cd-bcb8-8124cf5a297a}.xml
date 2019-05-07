@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objects serializationModel="Studio.01.10.00">
+    <object class="AudioFile" id="{c5c4497f-cbbd-45cd-bcb8-8124cf5a297a}">
+        <property name="assetPath">
+            <value>ichrkill.wav</value>
+        </property>
+        <property name="frequencyInKHz">
+            <value>22.0499992</value>
+        </property>
+        <property name="channelCount">
+            <value>1</value>
+        </property>
+        <property name="length">
+            <value>2.2226303854875282</value>
+        </property>
+        <relationship name="masterAssetFolder">
+            <destination>{330c2986-b78e-49d1-9588-67dd6f30ef20}</destination>
+        </relationship>
+    </object>
+</objects>

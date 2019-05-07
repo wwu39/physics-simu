@@ -13,18 +13,24 @@ using UnityEngine.EventSystems;
 using System;
 using UnityEngine.SceneManagement;
 
-public enum SBS { START, STOP }
-
 public class UI : MonoBehaviour
 {
+    [FMODUnity.EventRef]
+    public string button_press;
+    [FMODUnity.EventRef]
+    public string cancel;
+    [FMODUnity.EventRef]
+    public string hintSound;
+
     static public Vector3 ContinuousForce;
-    static public SBS sb_status = SBS.START; //Done
     static public float MAX_FORCE = 10;
     static public float delta = 0; // in Radius
     static public float MAX_WORK = 225;
     static private bool showHint = true;
 
     public Button StartButton;
+    public Button NextLevel2;
+    public Button ToMenu;
     public Scrollbar ContinuousForceScrollbar;
     public InputField CFAngle;
     public Scrollbar WorkScrollbar;
@@ -47,9 +53,10 @@ public class UI : MonoBehaviour
         // deselect any
         EventSystem.current.SetSelectedGameObject(null);
 
-        StartButton.onClick.AddListener(StartButtonClick);
+        StartButton.onClick.AddListener(PlayAgianClick);
+        NextLevel2.onClick.AddListener(NextLevelClick);
+        ToMenu.onClick.AddListener(ToMenuClick);
         Time.timeScale = 0; // freeze the game
-        sb_status = SBS.START;
 
         HintNext.onClick.AddListener(HintNextClick);
         HintOK.onClick.AddListener(HintOKClick);
@@ -70,31 +77,45 @@ public class UI : MonoBehaviour
         {
             Hint.transform.localPosition = new Vector3(9999, 9999, 0);
             Hint2.transform.localPosition = new Vector3(9999, 9999, 0);
-            StartButtonClick();
+            Time.timeScale = 1;
         }
+        else FMODUnity.RuntimeManager.PlayOneShot(hintSound);
         showHint = false;
     }
 
     void PlayAgianClick()
     {
-        SceneManager.LoadScene(0);
+        FMODUnity.RuntimeManager.PlayOneShot(button_press);
+        Scoring.gameObject.SetActive(false);
+        SceneManager.LoadScene(1);
     }
 
     void NextLevelClick()
     {
-        SceneManager.LoadScene(1);
+        FMODUnity.RuntimeManager.PlayOneShot(button_press);
+        SceneManager.LoadScene(2);
+    }
+
+    void ToMenuClick()
+    {
+        FMODUnity.RuntimeManager.PlayOneShot(button_press);
+        showHint = true;
+        SceneManager.LoadScene(0);
     }
 
     void HintNextClick()
     {
+        FMODUnity.RuntimeManager.PlayOneShot(button_press);
         Hint.transform.localPosition = new Vector3(9999, 9999, 0);
         Hint2.transform.localPosition = new Vector3(0, 0, 0);
+        FMODUnity.RuntimeManager.PlayOneShot(hintSound);
     }
 
     void HintOKClick()
     {
+        FMODUnity.RuntimeManager.PlayOneShot(button_press);
         Hint2.transform.localPosition = new Vector3(9999, 9999, 0);
-        StartButtonClick();
+        Time.timeScale = 1;
     }
 
     private void TaskAngleChanged()
@@ -118,7 +139,7 @@ public class UI : MonoBehaviour
         WorkScrollbar.value = Cube.workDone / MAX_WORK;
     }
 
-    void Update()
+    void FixedUpdate()
     {
         if (Cube.clear)
         {
@@ -151,9 +172,6 @@ public class UI : MonoBehaviour
             return;
         }
 
-        // pause & resume
-        if (Input.GetKeyDown(KeyCode.Space)) StartButtonClick();
-
         // update angle input field
         if (ContinuousForce.magnitude != 0)
         {
@@ -164,32 +182,31 @@ public class UI : MonoBehaviour
         }
         // update force scrollbar
         ContinuousForceScrollbar.value = ContinuousForce.magnitude > MAX_FORCE ? 1f : ContinuousForce.magnitude / MAX_FORCE;
-        
+
         // right click 0 out con force
-        if (Input.GetKeyDown(KeyCode.Mouse1)) ContinuousForceScrollbar.value = 0;
+        if (Input.GetKeyDown(KeyCode.Mouse1))
+        {
+            FMODUnity.RuntimeManager.PlayOneShot(cancel);
+            ContinuousForceScrollbar.value = 0;
+        }
         // scroll can change the size of the force too
         if (Input.mouseScrollDelta.y < 0) ContinuousForceScrollbar.value += 1f / ContinuousForceScrollbar.numberOfSteps;
         else if (Input.mouseScrollDelta.y > 0) ContinuousForceScrollbar.value -= 1f / ContinuousForceScrollbar.numberOfSteps;
 
+        // direction keys control
+        if (Input.GetKey(KeyCode.W) && Input.GetKey(KeyCode.D)) CFAngle.text = "45";
+        else if (Input.GetKey(KeyCode.W) && Input.GetKey(KeyCode.A)) CFAngle.text = "135";
+        else if (Input.GetKey(KeyCode.S) && Input.GetKey(KeyCode.A)) CFAngle.text = "225";
+        else if (Input.GetKey(KeyCode.S) && Input.GetKey(KeyCode.D)) CFAngle.text = "315";
+        else if (Input.GetKey(KeyCode.W)) CFAngle.text = "90";
+        else if (Input.GetKey(KeyCode.A)) CFAngle.text = "180";
+        else if (Input.GetKey(KeyCode.D)) CFAngle.text = "1";
+        else if (Input.GetKey(KeyCode.S)) CFAngle.text = "270";
+
         // Work Scrollbar
         WorkScrollbar.value = Cube.workDone / MAX_WORK;
-    }
 
-    void StartButtonClick()
-    {
-        switch (sb_status)
-        {
-            case SBS.START:
-                Time.timeScale = 1;
-                StartButton.GetComponentInChildren<Text>().text = "Pause";
-                sb_status = SBS.STOP;
-                break;
-            case SBS.STOP:
-                Time.timeScale = 0;
-                StartButton.GetComponentInChildren<Text>().text = "Start";
-                sb_status = SBS.START;
-                break;
-        }
-        EventSystem.current.SetSelectedGameObject(null);
+        // goto menu
+        if (Input.GetKeyDown(KeyCode.Escape)) ToMenuClick();
     }
 }

@@ -2,31 +2,68 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Water : MonoBehaviour {
+public class Water : MonoBehaviour
+{
 
-	// Use this for initialization
-	void Start () {
-		
-	}
+    [FMODUnity.EventRef]
+    public string splash;
+    [FMODUnity.EventRef]
+    public string underwater;
+    FMOD.Studio.EventInstance underwaterEvent;
+    public ParticleSystem waterSplashSys;
+    public List<ParticleSystem> pslist;
+    public GameObject centerPoint;
+    bool enter = false;
+
+    // Use this for initialization
+    void Start ()
+    {
+        underwaterEvent = FMODUnity.RuntimeManager.CreateInstance(underwater);
+    }
 	
 	// Update is called once per frame
-	void Update () {
-		
-	}
-
-    void OnTriggerEnter(Collider o)
+	void Update ()
     {
-        if (o.name == "Cube")
+        for (var i = pslist.Count - 1; i != -1; --i)
         {
-            o.GetComponent<Rigidbody>().useGravity = false;
+            if (pslist[i].particleCount > 100)
+            {
+                pslist[i].Stop();
+            }
+
+            if (pslist[i].particleCount ==0)
+            {
+                Destroy(pslist[i]);
+                pslist.RemoveAt(i);
+            }
+        }
+
+        if (!enter && GetComponent<BoxCollider>().bounds.Contains(centerPoint.transform.position))
+        {
+            enter = true;
+            centerPoint.GetComponentInParent<Rigidbody>().useGravity = false;
+            ParticleSystem nps = Instantiate(waterSplashSys) as ParticleSystem;
+            nps.gameObject.SetActive(true);
+            nps.transform.position = centerPoint.transform.position;
+            pslist.Add(nps);
+            FMODUnity.RuntimeManager.PlayOneShot(splash);
+            underwaterEvent.start();
+        }
+        if (enter && !GetComponent<BoxCollider>().bounds.Contains(centerPoint.transform.position))
+        {
+            enter = false;
+            centerPoint.GetComponentInParent<Rigidbody>().useGravity = true;
+            ParticleSystem nps = Instantiate(waterSplashSys) as ParticleSystem;
+            nps.gameObject.SetActive(true);
+            nps.transform.position = centerPoint.transform.position;
+            pslist.Add(nps);
+            FMODUnity.RuntimeManager.PlayOneShot(splash);
+            underwaterEvent.stop(FMOD.Studio.STOP_MODE.ALLOWFADEOUT);
         }
     }
 
-    void OnTriggerExit(Collider o)
+    private void OnDestroy()
     {
-        if (o.name == "Cube")
-        {
-            o.GetComponent<Rigidbody>().useGravity = true;
-        }
+        underwaterEvent.stop(FMOD.Studio.STOP_MODE.IMMEDIATE);
     }
 }

@@ -4,20 +4,30 @@ using UnityEngine;
 
 public class Handle : MonoBehaviour {
 
+    [FMODUnity.EventRef]
+    public string knob;
+    [FMODUnity.EventRef]
+    public string hover;
+
     public GameObject centerpoint;
     public GameObject Crate;
 
     private void OnMouseEnter()
     {
         centerpoint.SetActive(true);
+        FMODUnity.RuntimeManager.PlayOneShot(hover);
     }
 
     private void OnMouseDown()
     {
-        if (Cube2.insideAccel)
+        if (!GetComponent<Animation>().isPlaying)
         {
-            Accelerator.launch = true;
-            Crate.GetComponent<Rigidbody>().velocity = new Vector3(0f, -5f, 0f);
+            FMODUnity.RuntimeManager.PlayOneShot(knob);
+            if (Cube2.insideAccel)
+            {
+                Accelerator.launch = true;
+                Crate.GetComponent<Rigidbody>().velocity = new Vector3(0f, -5f, 0f);
+            }
             GetComponent<Animation>().Play();
         }
     }

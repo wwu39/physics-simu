@@ -15,13 +15,25 @@ using UnityEngine.SceneManagement;
 
 public class UI2 : MonoBehaviour
 {
+    [FMODUnity.EventRef]
+    public string button_press;
+    [FMODUnity.EventRef]
+    public string spawn;
+    bool playedSpawnSound = false;
+    [FMODUnity.EventRef]
+    public string cancel;
+    [FMODUnity.EventRef]
+    public string hintSound;
+    [FMODUnity.EventRef]
+    public string attached;
+
     static public Vector3 ContinuousForce;
-    static public SBS sb_status = SBS.START; //Done
-    static public float MAX_FORCE = 10;
+    static public float MAX_FORCE = 11;
     static public float delta = 0; // in Radius
     static public float MAX_WORK = 100;
 
     public Button StartButton;
+    public Button ToMain;
     public Scrollbar ContinuousForceScrollbar;
     public InputField CFAngle;
     public Scrollbar WorkScrollbar;
@@ -38,9 +50,7 @@ public class UI2 : MonoBehaviour
 
     // intro stuff
     public Image intro1;
-    public Image intro2;
     public Button next;
-    public Button ok;
     public Image Restarthint;
     public Button ok2;
     static bool showRSHint = true;
@@ -54,9 +64,10 @@ public class UI2 : MonoBehaviour
         EventSystem.current.SetSelectedGameObject(null);
 
         StartButton.onClick.AddListener(StartButtonClick);
+        ToMain.onClick.AddListener(ToMenuClick);
 
         PlayAgian.onClick.AddListener(PlayAgianClick);
-        NextLevel.onClick.AddListener(NextLevelClick);
+        NextLevel.onClick.AddListener(ToMenuClick);
         Scoring.transform.localPosition = new Vector3(9999, 9999, 0);
 
         ContinuousForceScrollbar.onValueChanged.AddListener(delegate { TaskOnValueChanged(); });
@@ -66,8 +77,7 @@ public class UI2 : MonoBehaviour
         CFAngle.text = "0";
         suckForce = false;
 
-        next.onClick.AddListener(ToIntro2);
-        ok.onClick.AddListener(StartGame);
+        next.onClick.AddListener(StartGame);
         ok2.onClick.AddListener(RestartGame);
         Restarthint.transform.localPosition = new Vector3(9999, 9999, 0);
 
@@ -75,8 +85,6 @@ public class UI2 : MonoBehaviour
         else
         {
             intro1.transform.localPosition = new Vector3(9999, 9999, 0);
-            intro2.transform.localPosition = new Vector3(9999, 9999, 0);
-
         }
     }
 
@@ -84,28 +92,27 @@ public class UI2 : MonoBehaviour
     {
         Time.timeScale = 0;
         intro1.transform.localPosition = new Vector3(0, 0, 0);
-        intro2.transform.localPosition = new Vector3(9999, 9999, 0);
         showHint = false;
+        FMODUnity.RuntimeManager.PlayOneShot(hintSound);
     }
-    void ToIntro2() {
-        intro1.transform.localPosition = new Vector3(9999, 9999, 0);
-        intro2.transform.localPosition = new Vector3(0, 0, 0);
-    }
+
     void StartGame()
     {
-
-        intro2.transform.localPosition = new Vector3(9999, 9999, 0);
+        FMODUnity.RuntimeManager.PlayOneShot(button_press);
+        intro1.transform.localPosition = new Vector3(9999, 9999, 0);
         Time.timeScale = 1;
     }
 
     void PlayAgianClick()
     {
-        SceneManager.LoadScene(1);
+        FMODUnity.RuntimeManager.PlayOneShot(button_press);
+        SceneManager.LoadScene(4);
     }
 
     void NextLevelClick()
     {
-        SceneManager.LoadScene(0);
+        FMODUnity.RuntimeManager.PlayOneShot(button_press);
+        SceneManager.LoadScene(1);
     }
 
     private void TaskAngleChanged()
@@ -129,8 +136,16 @@ public class UI2 : MonoBehaviour
         WorkScrollbar.value = Cube2.workDone / MAX_WORK;
     }
 
-    void Update()
+    void FixedUpdate()
     {
+        if (Time.timeScale == 1)
+            if (!playedSpawnSound)
+            {
+                FMODUnity.RuntimeManager.PlayOneShot(spawn);
+                playedSpawnSound = true;
+            }
+        
+
         if (Cube2.clear)
         {
             if (Cube2.workDone <= 10f)
@@ -164,6 +179,7 @@ public class UI2 : MonoBehaviour
 
         if (Sticky.IsMouseOver && Input.GetMouseButtonDown(0))
         {
+            FMODUnity.RuntimeManager.PlayOneShot(attached);
             suckForce = true;
         }
 
@@ -192,30 +208,55 @@ public class UI2 : MonoBehaviour
         {
             ContinuousForceScrollbar.value = 0;
             suckForce = false;
+            FMODUnity.RuntimeManager.PlayOneShot(cancel);
         }
         // scroll can change the size of the force too
         if (Input.mouseScrollDelta.y < 0) ContinuousForceScrollbar.value += 1f / ContinuousForceScrollbar.numberOfSteps;
         else if (Input.mouseScrollDelta.y > 0) ContinuousForceScrollbar.value -= 1f / ContinuousForceScrollbar.numberOfSteps;
 
+        // direction keys control
+        if (Input.GetKey(KeyCode.W) && Input.GetKey(KeyCode.D)) CFAngle.text = "45";
+        else if (Input.GetKey(KeyCode.W) && Input.GetKey(KeyCode.A)) CFAngle.text = "135";
+        else if (Input.GetKey(KeyCode.S) && Input.GetKey(KeyCode.A)) CFAngle.text = "225";
+        else if (Input.GetKey(KeyCode.S) && Input.GetKey(KeyCode.D)) CFAngle.text = "315";
+        else if (Input.GetKey(KeyCode.W)) CFAngle.text = "90";
+        else if (Input.GetKey(KeyCode.A)) CFAngle.text = "180";
+        else if (Input.GetKey(KeyCode.D)) CFAngle.text = "1";
+        else if (Input.GetKey(KeyCode.S)) CFAngle.text = "270";
+
         // Work Scrollbar
         WorkScrollbar.value = Cube2.workDone / MAX_WORK;
+
+        // goto menu
+        if (Input.GetKeyDown(KeyCode.Escape)) ToMenuClick();
     }
 
     void StartButtonClick()
     {
+        FMODUnity.RuntimeManager.PlayOneShot(button_press);
         if (showRSHint)
         {
             Time.timeScale = 0;
             Restarthint.transform.localPosition = new Vector3();
             showRSHint = false;
         }
-        else SceneManager.LoadScene(1);
+        else SceneManager.LoadScene(4);
         EventSystem.current.SetSelectedGameObject(null);
     }
+
     void RestartGame()
     {
         Time.timeScale = 1;
-        SceneManager.LoadScene(1);
+        SceneManager.LoadScene(4);
         EventSystem.current.SetSelectedGameObject(null);
+        FMODUnity.RuntimeManager.PlayOneShot(button_press);
+    }
+
+    void ToMenuClick()
+    {
+        FMODUnity.RuntimeManager.PlayOneShot(button_press);
+        showHint = true;
+        showRSHint = true;
+        SceneManager.LoadScene(0);
     }
 }

@@ -1,28 +1,33 @@
 fileFormatVersion: 2
-guid: 4fff42bb76f3b864fa18c31ae2640d23
+guid: 59d531f9f39a6f142b22225af8c149aa
 ModelImporter:
   serializedVersion: 23
   fileIDToRecycleName:
     100000: //RootNode
     100002: Box003
-    100004: "\u52A0\u5F3A\u578B\u6587\u672C005"
+    100004: "\u52A0\u5F3A\u578B\u6587\u672C004"
     100006: "\u56FE\u5F62001"
+    100008: "\u52A0\u5F3A\u578B\u6587\u672C005"
     400000: //RootNode
     400002: Box003
-    400004: "\u52A0\u5F3A\u578B\u6587\u672C005"
+    400004: "\u52A0\u5F3A\u578B\u6587\u672C004"
     400006: "\u56FE\u5F62001"
+    400008: "\u52A0\u5F3A\u578B\u6587\u672C005"
     2100000: 17 - Default
     2100002: metal
     2100004: 13 - Default
     2300000: Box003
-    2300002: "\u52A0\u5F3A\u578B\u6587\u672C005"
+    2300002: "\u52A0\u5F3A\u578B\u6587\u672C004"
     2300004: "\u56FE\u5F62001"
+    2300006: "\u52A0\u5F3A\u578B\u6587\u672C005"
     3300000: Box003
-    3300002: "\u52A0\u5F3A\u578B\u6587\u672C005"
+    3300002: "\u52A0\u5F3A\u578B\u6587\u672C004"
     3300004: "\u56FE\u5F62001"
+    3300006: "\u52A0\u5F3A\u578B\u6587\u672C005"
     4300000: Box003
     4300002: "\u56FE\u5F62001"
-    4300004: "\u52A0\u5F3A\u578B\u6587\u672C005"
+    4300004: "\u52A0\u5F3A\u578B\u6587\u672C004"
+    4300006: "\u52A0\u5F3A\u578B\u6587\u672C005"
     11100000: //RootNode
   externalObjects: {}
   materials:
@@ -58,6 +63,7 @@ ModelImporter:
     globalScale: 1
     meshCompression: 0
     addColliders: 0
+    useSRGBMaterialColor: 1
     importVisibility: 1
     importBlendShapes: 1
     importCameras: 1
@@ -82,6 +88,9 @@ ModelImporter:
     normalImportMode: 0
     tangentImportMode: 3
     normalCalculationMode: 4
+    legacyComputeAllNormalsFromSmoothingGroupsWhenMeshHasBlendShapes: 0
+    blendShapeNormalImportMode: 1
+    normalSmoothingSource: 0
   importAnimation: 1
   copyAvatar: 0
   humanDescription:

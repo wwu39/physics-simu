@@ -3,6 +3,10 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class Accelerator : MonoBehaviour {
+
+    [FMODUnity.EventRef]
+    public string catchCrate;
+
     static public bool launch;
 
 	// Use this for initialization
@@ -18,6 +22,7 @@ public class Accelerator : MonoBehaviour {
     {
         if (other.name == "Cube")
         {
+            FMODUnity.RuntimeManager.PlayOneShot(catchCrate);
             other.GetComponent<Rigidbody>().velocity = new Vector3();
             other.transform.position = transform.position;
             Cube2.insideAccel = true;

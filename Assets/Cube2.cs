@@ -6,6 +6,18 @@ using UnityEngine.SceneManagement;
 
 public class Cube2 : MonoBehaviour
 {
+    // Sound stuff
+    [FMODUnity.EventRef]
+    public string drag;
+    FMOD.Studio.EventInstance dragEvent;
+    bool hasSupport;
+    public float param;
+    [FMODUnity.EventRef]
+    public string win;
+    [FMODUnity.EventRef]
+    public string impact;
+    [FMODUnity.EventRef]
+    public string interact;
 
     public GameObject arrowPrefab;
 
@@ -20,17 +32,10 @@ public class Cube2 : MonoBehaviour
     private bool applyForce = false;
     static public bool clear;
     static public bool insideAccel;
-
-    // 0 = player_force
-    // 1 = gravity
-    // 2 = support
-    // 3 = friction
-    // 4 = ???
+    
     public List<GameObject> arrows;
     static public bool drawForce = false;
-    public bool hasSupport;
-    public Vector3 player_force, G, N, f; // forces
-    public bool drawOtherForces = false;
+    public Vector3 player_force;
     // work related
     static public float workDone;
     private Vector3 lastPos;
@@ -42,28 +47,30 @@ public class Cube2 : MonoBehaviour
         Transform centerPointTrans = transform.Find("CenterPoint");
         centerPoint = centerPointTrans.gameObject;
         centerPoint.SetActive(false);
-        G = Physics.gravity * GetComponent<Rigidbody>().mass;
         arrowPrefab.transform.position = new Vector3(1000, 1000);
     }
 
     void OnCollisionEnter(Collision col)
     {
-        if (col.gameObject.name == "Floor") hasSupport = true;
-
         if (col.gameObject.name == "Star") // level clear
         {
+            FMODUnity.RuntimeManager.PlayOneShot(win);
             Destroy(col.gameObject);
             clear = true;
         }
+        else if (col.gameObject.name != "Axl" || col.gameObject.name != "crap") FMODUnity.RuntimeManager.PlayOneShot(impact);
+
+        if (col.gameObject.name == "glass" || col.gameObject.name == "metal") hasSupport = true;
     }
 
     private void OnCollisionExit(Collision col)
     {
-        if (col.gameObject.name == "Floor") hasSupport = false;
+        if (col.gameObject.name == "glass" || col.gameObject.name == "metal") hasSupport = false;
     }
 
     private void OnMouseEnter()
     {
+        FMODUnity.RuntimeManager.PlayOneShot(interact);
         centerPoint.SetActive(true);
     }
 
@@ -89,11 +96,19 @@ public class Cube2 : MonoBehaviour
         workDone = 0;
         clear = false;
         insideAccel = false;
+        dragEvent = FMODUnity.RuntimeManager.CreateInstance(drag);
+        dragEvent.start();
     }
 
     // Update is called once per frame
-    void Update()
+    void FixedUpdate()
     {
+        // sound
+        param = GetComponent<Rigidbody>().velocity.magnitude;
+        if (param > 1) param = 1;
+        if (!hasSupport) param = 0;
+        dragEvent.setParameterValue("Speed", param * 0.8f);
+
         m_pos = Input.mousePosition;
         centerPos = centerPoint.transform.position;
 
@@ -116,59 +131,15 @@ public class Cube2 : MonoBehaviour
         }
         if (UI2.ContinuousForce.magnitude == 0) arrows[0].transform.position = new Vector3(9999, 9999, 9999); // hide the arrow if no force
 
-        if (drawOtherForces)
-        {
-            // drawing gravity
-            if (GetComponent<Rigidbody>().useGravity)
-            {
-                if (arrows[1] == null) arrows[1] = Instantiate(arrowPrefab) as GameObject;
-                if (arrows[1] != null) Utils.DrawForce(centerPos, arrows[1], G, new Color(55, 0, 55));
-            }
-            else
-            {
-                Destroy(arrows[1]);
-                arrows[1] = null;
-            }
-
-            // draw support force
-            if (hasSupport)
-            {
-                // direction
-                var sf_dir = transform.rotation; // rotation of the box, pointed downwards
-                                                 // size
-                float size = -G.y * Mathf.Cos(sf_dir.eulerAngles.z);
-                if (arrows[2] == null) arrows[2] = Instantiate(arrowPrefab) as GameObject;
-                if (arrows[2] != null) Utils.DrawForce(centerPos, arrows[2], sf_dir, size, new Color(0, 0, 55));
-            }
-            else
-            {
-                Destroy(arrows[2]);
-                arrows[2] = null;
-            }
-
-            // draw friction
-            if (hasSupport)
-            {
-                // direction
-                var ff_dir = transform.rotation;
-                ff_dir = Quaternion.Euler(new Vector3(0, 0, -90));
-                // size
-                float size = -G.y * Mathf.Sin(ff_dir.eulerAngles.z);
-                if (arrows[3] == null) arrows[3] = Instantiate(arrowPrefab) as GameObject;
-                if (arrows[3] != null) Utils.DrawForce(centerPos, arrows[3], ff_dir, size, new Color(0, 55, 0));
-            }
-            else
-            {
-                Destroy(arrows[3]);
-                arrows[3] = null;
-            }
-        }
-
         // calcalate work done for con force
         Vector3 ds = transform.position - lastPos;
         if (UI2.ContinuousForce.magnitude != 0 && ds.magnitude != 0)
             workDone += UI2.ContinuousForce.magnitude * ds.magnitude * Utils.includedAngle2DCos(UI2.ContinuousForce, ds);
         lastPos = transform.position;
-        print(workDone);
+    }
+
+    private void OnDestroy()
+    {
+        dragEvent.stop(FMOD.Studio.STOP_MODE.IMMEDIATE);
     }
 }
